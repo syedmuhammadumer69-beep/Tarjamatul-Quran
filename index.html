@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="ur" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ترجمۃ القران - APS&C Faisal</title>
+    <style>
+        :root { --primary-color: #006400; --bg-color: #f4f7f6; }
+        body { font-family: 'Jameel Noori Nastaleeq', Arial, sans-serif; background-color: var(--bg-color); margin: 0; padding: 0; }
+        .header { background-color: var(--primary-color); color: white; text-align: center; padding: 20px; }
+        .header h1 { margin: 0; font-size: 24px; }
+        .header p { margin: 5px 0 0; font-size: 14px; }
+        .container { max-width: 600px; margin: 20px auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        .screen { display: none; }
+        .screen.active { display: block; }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #ccc; border-radius: 5px; box-sizing: border-box; font-size: 16px; }
+        button { background-color: var(--primary-color); color: white; border: none; cursor: pointer; font-weight: bold; }
+        button:hover { background-color: #004d00; }
+        .timer-bar { width: 100%; background-color: #e0e0e0; height: 10px; border-radius: 5px; margin-bottom: 20px; }
+        .timer-progress { height: 100%; background-color: var(--primary-color); width: 100%; border-radius: 5px; transition: width 1s linear; }
+        .options-container button { text-align: right; background-color: #f9f9f9; color: black; border: 1px solid #ddd; }
+        .options-container button:hover { background-color: #e9ecef; }
+        .error { color: red; text-align: center; font-weight: bold; }
+        .result-card { border: 2px solid var(--primary-color); padding: 20px; border-radius: 10px; text-align: center; }
+        .footer { text-align: center; margin-top: 20px; font-size: 12px; color: #777; }
+        .admin-lock { position: fixed; bottom: 10px; right: 10px; font-size: 20px; cursor: pointer; opacity: 0.5; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Army Public School & College</h1>
+        <p>Faisal, Karachi — Senior Section</p>
+        <p>مضمون: ترجمۃ القران | استاد: Syed Muhammad Umer Fareed</p>
+    </div>
+
+    <div class="container">
+        <!-- Login Screen -->
+        <div id="loginScreen" class="screen active">
+            <h2 style="text-align: center;">طالب علم کی معلومات</h2>
+            <p style="text-align: center; color: #555;">ٹیسٹ شروع کرنے سے پہلے اپنی تفصیلات درج کریں</p>
+            <input type="text" id="studentName" placeholder="طالب علم کا نام" required>
+            <input type="text" id="fatherName" placeholder="والد کا نام" required>
+            <input type="number" id="rollNo" placeholder="رول نمبر (مثلاً 101)" required>
+            <select id="section">
+                <option value="">سیکشن منتخب کریں</option>
+                <option value="A">Section A</option>
+                <option value="B">Section B</option>
+                <option value="C">Section C</option>
+                <option value="D">Section D</option>
+            </select>
+            <button onclick="startTest()">ٹیسٹ شروع کریں</button>
+            <p id="loginError" class="error"></p>
+        </div>
+
+        <!-- Lock Screen -->
+        <div id="lockScreen" class="screen">
+            <h2 style="text-align: center; color: red;">🔒 Test Already Attempted</h2>
+            <p style="text-align: center;">آپ یہ ٹیسٹ پہلے ہی دے چکے ہیں۔ دوبارہ ٹیسٹ دینے کے لیے اپنے استاد سے رابطہ کریں۔</p>
+        </div>
+
+        <!-- Quiz Screen -->
+        <div id="quizScreen" class="screen">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                <span id="questionCounter">سوال 1 / 20</span>
+                <span id="timerText" style="font-weight: bold; color: var(--primary-color);">60s</span>
+            </div>
+            <div class="timer-bar"><div id="timerProgress" class="timer-progress"></div></div>
+            <h2 id="questionText">سوال یہاں آئے گا</h2>
+            <div id="options" class="options-container"></div>
+        </div>
+
+        <!-- Result Screen -->
+        <div id="resultScreen" class="screen">
+            <div class="result-card">
+                <h2>OFFICIAL EXAMINATION RESULT</h2>
+                <h3 style="margin: 0; color: var(--primary-color);">ARMY PUBLIC SCHOOL & COLLEGE</h3>
+                <p style="margin: 5px 0;">Faisal, Karachi (Senior Section)</p>
+                <hr>
+                <p><strong>نام:</strong> <span id="resName"></span></p>
+                <p><strong>رول نمبر:</strong> <span id="resRoll"></span> | <strong>سیکشن:</strong> <span id="resSec"></span></p>
+                <hr>
+                <h2>حاصل کردہ نمبر: <span id="resMarks"></span> / 20</h2>
+                <p><strong>فیصد:</strong> <span id="resPerc"></span>%</p>
+                <p style="color: red; font-size: 14px;">📷 اس رزلٹ کارڈ کا سکرین شاٹ لے کر اپنے متعلقہ ٹیچر کو واٹس ایپ کریں۔</p>
+                <hr>
+                <p style="font-size: 12px; color: #555;">Developed by: Syed Muhammad Umer Fareed</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div class="admin-lock" onclick="openAdmin()">🔒</div>
+
+    <script>
+        const validRolls = ['101', '102', '103', '104', '105'];
+        const questions = [
+            {q: "قرآن مجید کی سب سے پہلی سورت کون سی ہے؟", options: ["سورۃ البقرہ", "سورۃ الفاتحہ", "سورۃ الاخلاص", "سورۃ الناس"], answer: 1},
+            {q: "قرآن مجید میں کتنے پارے ہیں؟", options: ["20", "30", "40", "10"], answer: 1},
+            {q: "قرآن مجید کی سب سے لمبی سورت کون سی ہے؟", options: ["سورۃ النساء", "سورۃ البقرہ", "سورۃ العمران", "سورۃ المائدہ"], answer: 1},
+            {q: "بسم اللہ الرحمن الرحیم قرآن میں کتنی بار آئی ہے؟", options: ["113", "114", "115", "112"], answer: 1},
+            {q: "کون سی سورت میں بسم اللہ نہیں ہے؟", options: ["سورۃ التوبہ", "سورۃ یٰسین", "سورۃ الرحمٰن", "سورۃ الکہف"], answer: 0}
+            // یہاں آپ بقیہ 15 سوالات شامل کر سکتے ہیں
+        ];
+
+        let currentQ = 0, score = 0, timeLeft = 60, timerInterval;
+        let studentData = {};
+
+        function startTest() {
+            let name = document.getElementById('studentName').value;
+            let fname = document.getElementById('fatherName').value;
+            let roll = document.getElementById('rollNo').value;
+            let sec = document.getElementById('section').value;
+
+            if(!name || !fname || !roll || !sec) {
+                document.getElementById('loginError').innerText = "براہ کرم تمام معلومات درست درج کریں۔";
+                return;
+            }
+            if(!validRolls.includes(roll)) {
+                document.getElementById('loginError').innerText = "غلط رول نمبر! رسائی ممکن نہیں۔";
+                return;
+            }
+            
+            // چیک کریں کہ کیا یہ رول نمبر پہلے ٹیسٹ دے چکا ہے؟
+            if(localStorage.getItem('attempted_' + roll) === 'true') {
+                document.getElementById('loginScreen').classList.remove('active');
+                document.getElementById('lockScreen').classList.add('active');
+                return;
+            }
+
+            studentData = { name, roll, sec };
+            document.getElementById('loginScreen').classList.remove('active');
+            document.getElementById('quizScreen').classList.add('active');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            clearInterval(timerInterval);
+            if(currentQ >= questions.length) {
+                showResult();
+                return;
+            }
+            timeLeft = 60;
+            document.getElementById('questionCounter').innerText = `سوال ${currentQ + 1} / ${questions.length}`;
+            document.getElementById('questionText').innerText = questions[currentQ].q;
+            
+            let optsHtml = "";
+            questions[currentQ].options.forEach((opt, idx) => {
+                optsHtml += `<button onclick="checkAnswer(${idx})">${opt}</button>`;
+            });
+            document.getElementById('options').innerHTML = optsHtml;
+            
+            timerInterval = setInterval(updateTimer, 1000);
+            updateTimer();
+        }
+
+        function updateTimer() {
+            document.getElementById('timerText').innerText = timeLeft + "s";
+            document.getElementById('timerProgress').style.width = (timeLeft / 60 * 100) + "%";
+            if(timeLeft <= 15) document.getElementById('timerProgress').style.backgroundColor = "red";
+            else document.getElementById('timerProgress').style.backgroundColor = "var(--primary-color)";
+            
+            if(timeLeft <= 0) {
+                clearInterval(timerInterval);
+                currentQ++;
+                loadQuestion();
+            }
+            timeLeft--;
+        }
+
+        function checkAnswer(selectedIdx) {
+            clearInterval(timerInterval);
+            if(selectedIdx === questions[currentQ].answer) score++;
+            currentQ++;
+            setTimeout(loadQuestion, 500);
+        }
+
+        function showResult() {
+            document.getElementById('quizScreen').classList.remove('active');
+            document.getElementById('resultScreen').classList.add('active');
+            
+            document.getElementById('resName').innerText = studentData.name;
+            document.getElementById('resRoll').innerText = studentData.roll;
+            document.getElementById('resSec').innerText = studentData.sec;
+            document.getElementById('resMarks').innerText = score;
+            document.getElementById('resPerc').innerText = Math.round((score / questions.length) * 100);
+            
+            // ٹیسٹ مکمل ہونے پر براؤزر کی میموری میں لاک لگا دیں
+            localStorage.setItem('attempted_' + studentData.roll, 'true');
+        }
+
+        function openAdmin() {
+            let pass = prompt("ایڈمن پاسورڈ درج کریں:");
+            if(pass === "aps123") {
+                let rollToReset = prompt("جس رول نمبر کا ٹیسٹ ری سیٹ کرنا ہے وہ درج کریں (مثلاً 101):");
+                if(rollToReset) {
+                    localStorage.removeItem('attempted_' + rollToReset);
+                    alert("رول نمبر " + rollToReset + " کا ٹیسٹ ان لاک کر دیا گیا ہے۔ وہ دوبارہ ٹیسٹ دے سکتا ہے۔");
+                    location.reload();
+                }
+            } else if (pass !== null) {
+                alert("غلط پاسورڈ!");
+            }
+        }
+    </script>
+</body>
+</html>
